@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel to PDF Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .features {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .features h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features li {
+            padding: 6px 0;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .features li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area:hover {
+            background: #f8f9ff;
+            border-color: #764ba2;
+        }
+        
+        .upload-area.dragover {
+            background: #f0f0ff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .file-types {
+            color: #999;
+            font-size: 12px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .selected-file {
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .selected-file.show {
+            display: block;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .file-name {
+            color: #2e7d32;
+            font-weight: 600;
+        }
+        
+        .remove-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 12px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .remove-btn:hover {
+            background: #d32f2f;
+        }
+        
+        .convert-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+        }
+        
+        .convert-btn.show {
+            display: block;
+        }
+        
+        .convert-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .convert-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .progress.show {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .result {
+            display: none;
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .result.show {
+            display: block;
+        }
+        
+        .result h3 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+        }
+        
+        .metadata {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .metadata-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .metadata-label {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .metadata-value {
+            color: #333;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .download-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .error {
+            display: none;
+            background: #ffebee;
+            border: 2px solid #f44336;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            color: #c62828;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .new-conversion-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        
+        .new-conversion-btn:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Excel to PDF Converter</h1>
+        <p class="subtitle">Convert any Excel file to a professional PDF with repeating headers</p>
+        
+        <div class="features">
+            <h3>Features:</h3>
+            <ul>
+                <li>All columns fit on each page</li>
+                <li>Headers repeat on every page</li>
+                <li>All data centered & formatted</li>
+                <li>Optimal column widths</li>
+                <li>Supports any Excel size</li>
+            </ul>
+        </div>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Click to upload or drag & drop</div>
+            <div class="file-types">Supports .xlsx, .xls, .xlsm (max 100MB)</div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm">
+        </div>
+        
+        <div class="selected-file" id="selectedFile">
+            <div class="file-info">
+                <span class="file-name" id="fileName"></span>
+                <button class="remove-btn" id="removeBtn">Remove</button>
+            </div>
+        </div>
+        
+        <button class="convert-btn" id="convertBtn">Convert to PDF</button>
+        
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Converting...</div>
+        </div>
+        
+        <div class="result" id="result">
+            <h3>✓ Conversion Successful!</h3>
+            <div class="metadata" id="metadata"></div>
+            <a href="#" class="download-btn" id="downloadBtn" download>Download PDF</a>
+            <br>
+            <button class="new-conversion-btn" id="newConversionBtn">Convert Another File</button>
+        </div>
+        
+        <div class="error" id="error">
+            <strong>Error:</strong> <span id="errorText"></span>
+        </div>
+    </div>
+    
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const selectedFile = document.getElementById('selectedFile');
+        const fileName = document.getElementById('fileName');
+        const removeBtn = document.getElementById('removeBtn');
+        const convertBtn = document.getElementById('convertBtn');
+        const progress = document.getElementById('progress');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const result = document.getElementById('result');
+        const metadata = document.getElementById('metadata');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const newConversionBtn = document.getElementById('newConversionBtn');
+        const error = document.getElementById('error');
+        const errorText = document.getElementById('errorText');
+        
+        let currentFile = null;
+        
+        // Click to upload
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        // Handle file selection
+        function handleFile(file) {
+            const validTypes = ['.xlsx', '.xls', '.xlsm'];
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!validTypes.includes(fileExt)) {
+                showError('Invalid file type. Please upload .xlsx, .xls, or .xlsm');
+                return;
+            }
+            
+            if (file.size > 100 * 1024 * 1024) {
+                showError('File is too large. Maximum size is 100MB');
+                return;
+            }
+            
+            currentFile = file;
+            fileName.textContent = file.name;
+            selectedFile.classList.add('show');
+            convertBtn.classList.add('show');
+            uploadArea.style.display = 'none';
+            error.classList.remove('show');
+        }
+        
+        // Remove file
+        removeBtn.addEventListener('click', () => {
+            currentFile = null;
+            fileInput.value = '';
+            selectedFile.classList.remove('show');
+            convertBtn.classList.remove('show');
+            uploadArea.style.display = 'block';
+        });
+        
+        // Convert
+        convertBtn.addEventListener('click', async () => {
+            if (!currentFile) return;
+            
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            
+            convertBtn.disabled = true;
+            progress.classList.add('show');
+            progressFill.style.width = '50%';
+            progressText.textContent = 'Converting your Excel file...';
+            result.classList.remove('show');
+            error.classList.remove('show');
+            
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    progressFill.style.width = '100%';
+                    progressText.textContent = 'Complete!';
+                    
+                    // Show result
+                    setTimeout(() => {
+                        progress.classList.remove('show');
+                        showResult(data);
+                    }, 500);
+                } else {
+                    throw new Error(data.error || 'Conversion failed');
+                }
+            } catch (err) {
+                progress.classList.remove('show');
+                showError(err.message);
+                convertBtn.disabled = false;
+            }
+        });
+        
+        // Show result
+        function showResult(data) {
+            const meta = data.metadata;
+            metadata.innerHTML = `
+                <div class="metadata-item">
+                    <div class="metadata-label">Rows</div>
+                    <div class="metadata-value">${meta.rows.toLocaleString()}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Columns</div>
+                    <div class="metadata-value">${meta.columns}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Pages</div>
+                    <div class="metadata-value">${meta.pages}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Page Size</div>
+                    <div class="metadata-value">${Math.round(meta.page_width)} × ${Math.round(meta.page_height)}</div>
+                </div>
+            `;
+            
+            downloadBtn.href = data.download_path;
+            downloadBtn.download = data.filename;
+            result.classList.add('show');
+        }
+        
+        // Show error
+        function showError(message) {
+            errorText.textContent = message;
+            error.classList.add('show');
+        }
+        
+        // New conversion
+        newConversionBtn.addEventListener('click', () => {
+            currentFile = null;
+            fileInput.value = '';
+            selectedFile.classList.remove('show');
+            convertBtn.classList.remove('show');
+            convertBtn.disabled = false;
+            result.classList.remove('show');
+            uploadArea.style.display = 'block';
+            progressFill.style.width = '0%';
+        });
+    </script>
+</body>
+</html>
