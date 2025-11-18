@@ -16,7 +16,7 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB  max file size
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
-ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'xlsm'}
+ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'xlsm', 'csv'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -24,8 +24,11 @@ def allowed_file(filename):
 def excel_to_pdf(excel_path, pdf_path):
     """Convert Excel to PDF with all columns on each page and repeating headers"""
     
-    # Read the Excel file
-    df = pd.read_excel(excel_path)
+    # Read the Excel or CSV file
+    if excel_path.lower().endswith('.csv'):
+        df = pd.read_csv(excel_path)
+    else:
+        df = pd.read_excel(excel_path)
     
     # Convert all data to strings and handle NaN values
     df = df.fillna('')

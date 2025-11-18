@@ -333,8 +333,8 @@
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">📁</div>
             <div class="upload-text">Click to upload or drag & drop</div>
-            <div class="file-types">Supports .xlsx, .xls, .xlsm (max 100MB)</div>
-            <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm">
+            <div class="file-types">Supports .xlsx, .xls, .xlsm, .csv (max 500MB)</div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm, .csv">
         </div>
         
         <div class="selected-file" id="selectedFile">
@@ -416,11 +416,11 @@
         
         // Handle file selection
         function handleFile(file) {
-            const validTypes = ['.xlsx', '.xls', '.xlsm'];
+            const validTypes = ['.xlsx', '.xls', '.xlsm', '.csv'];
             const fileExt = '.' + file.name.split('.').pop().toLowerCase();
             
             if (!validTypes.includes(fileExt)) {
-                showError('Invalid file type. Please upload .xlsx, .xls, or .xlsm');
+                showError('Invalid file type. Please upload .xlsx, .xls, .xlsm, or .csv');
                 return;
             }
             
