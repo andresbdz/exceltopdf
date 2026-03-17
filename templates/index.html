@@ -312,61 +312,281 @@
         .new-conversion-btn:hover {
             background: #764ba2;
         }
+
+        /* Tab Navigation Styles */
+        .tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            color: #666;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px 2px 0 0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* LibreOffice Status */
+        .libreoffice-status {
+            background: #fff3e0;
+            border: 1px solid #ffb74d;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .libreoffice-status.available {
+            background: #e8f5e9;
+            border-color: #81c784;
+        }
+
+        .libreoffice-status.unavailable {
+            background: #ffebee;
+            border-color: #e57373;
+        }
+
+        .libreoffice-status .status-icon {
+            font-size: 18px;
+        }
+
+        .libreoffice-status .status-text {
+            color: #555;
+        }
+
+        .print-features {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .print-features h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .print-features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .print-features li {
+            padding: 6px 0;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .print-features li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📊 Excel to PDF Converter</h1>
-        <p class="subtitle">Convert any Excel file to a professional PDF with repeating headers</p>
-        
-        <div class="features">
-            <h3>Features:</h3>
-            <ul>
-                <li>All columns fit on each page</li>
-                <li>Headers repeat on every page</li>
-                <li>All data centered & formatted</li>
-                <li>Optimal column widths</li>
-                <li>Supports any Excel size</li>
-            </ul>
+        <h1>Excel to PDF Converter</h1>
+        <p class="subtitle">Convert any Excel file to a professional PDF</p>
+
+        <!-- Tab Navigation -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="data-table">Data Table PDF</button>
+            <button class="tab-btn" data-tab="print-pdf">Print as PDF</button>
         </div>
-        
-        <div class="upload-area" id="uploadArea">
-            <div class="upload-icon">📁</div>
-            <div class="upload-text">Click to upload or drag & drop</div>
-            <div class="file-types">Supports .xlsx, .xls, .xlsm, .csv (max 500MB)</div>
-            <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm, .csv">
-        </div>
-        
-        <div class="selected-file" id="selectedFile">
-            <div class="file-info">
-                <span class="file-name" id="fileName"></span>
-                <button class="remove-btn" id="removeBtn">Remove</button>
+
+        <!-- Data Table Tab Content -->
+        <div class="tab-content active" id="data-table-tab">
+            <div class="features">
+                <h3>Features:</h3>
+                <ul>
+                    <li>All columns fit on each page</li>
+                    <li>Headers repeat on every page</li>
+                    <li>All data centered & formatted</li>
+                    <li>Optimal column widths</li>
+                    <li>Supports any Excel size</li>
+                </ul>
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Click to upload or drag & drop</div>
+                <div class="file-types">Supports .xlsx, .xls, .xlsm, .csv (max 500MB)</div>
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv">
+            </div>
+
+            <div class="selected-file" id="selectedFile">
+                <div class="file-info">
+                    <span class="file-name" id="fileName"></span>
+                    <button class="remove-btn" id="removeBtn">Remove</button>
+                </div>
+            </div>
+
+            <button class="convert-btn" id="convertBtn">Convert to PDF</button>
+
+            <div class="progress" id="progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Converting...</div>
+            </div>
+
+            <div class="result" id="result">
+                <h3>Conversion Successful!</h3>
+                <div class="metadata" id="metadata"></div>
+                <a href="#" class="download-btn" id="downloadBtn" download>Download PDF</a>
+                <br>
+                <button class="new-conversion-btn" id="newConversionBtn">Convert Another File</button>
+            </div>
+
+            <div class="error" id="error">
+                <strong>Error:</strong> <span id="errorText"></span>
             </div>
         </div>
-        
-        <button class="convert-btn" id="convertBtn">Convert to PDF</button>
-        
-        <div class="progress" id="progress">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
+
+        <!-- Print as PDF Tab Content -->
+        <div class="tab-content" id="print-pdf-tab">
+            <div class="libreoffice-status" id="libreofficeStatus">
+                <span class="status-icon">⏳</span>
+                <span class="status-text">Checking LibreOffice availability...</span>
             </div>
-            <div class="progress-text" id="progressText">Converting...</div>
-        </div>
-        
-        <div class="result" id="result">
-            <h3>✓ Conversion Successful!</h3>
-            <div class="metadata" id="metadata"></div>
-            <a href="#" class="download-btn" id="downloadBtn" download>Download PDF</a>
-            <br>
-            <button class="new-conversion-btn" id="newConversionBtn">Convert Another File</button>
-        </div>
-        
-        <div class="error" id="error">
-            <strong>Error:</strong> <span id="errorText"></span>
+
+            <div class="print-features">
+                <h3>Features:</h3>
+                <ul>
+                    <li>Each sheet = 1 PDF page (auto-scaled)</li>
+                    <li>Preserves original Excel formatting</li>
+                    <li>Keeps cell colors, fonts, and styles</li>
+                    <li>Maintains merged cells and borders</li>
+                    <li>Excel files only (.xlsx, .xls, .xlsm)</li>
+                </ul>
+            </div>
+
+            <div class="upload-area" id="printUploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Click to upload or drag & drop</div>
+                <div class="file-types">Supports .xlsx, .xls, .xlsm only (no CSV)</div>
+                <input type="file" id="printFileInput" accept=".xlsx,.xls,.xlsm">
+            </div>
+
+            <div class="selected-file" id="printSelectedFile">
+                <div class="file-info">
+                    <span class="file-name" id="printFileName"></span>
+                    <button class="remove-btn" id="printRemoveBtn">Remove</button>
+                </div>
+            </div>
+
+            <button class="convert-btn" id="printConvertBtn">Print as PDF</button>
+
+            <div class="progress" id="printProgress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="printProgressFill"></div>
+                </div>
+                <div class="progress-text" id="printProgressText">Converting...</div>
+            </div>
+
+            <div class="result" id="printResult">
+                <h3>Conversion Successful!</h3>
+                <div class="metadata" id="printMetadata"></div>
+                <a href="#" class="download-btn" id="printDownloadBtn" download>Download PDF</a>
+                <br>
+                <button class="new-conversion-btn" id="printNewConversionBtn">Convert Another File</button>
+            </div>
+
+            <div class="error" id="printError">
+                <strong>Error:</strong> <span id="printErrorText"></span>
+            </div>
         </div>
     </div>
     
     <script>
+        // =====================
+        // Tab Navigation
+        // =====================
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update active tab button
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Update active tab content
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(btn.dataset.tab + '-tab').classList.add('active');
+            });
+        });
+
+        // =====================
+        // LibreOffice Check
+        // =====================
+        let libreofficeAvailable = false;
+
+        async function checkLibreOffice() {
+            const statusEl = document.getElementById('libreofficeStatus');
+            try {
+                const response = await fetch('/check-libreoffice');
+                const data = await response.json();
+                libreofficeAvailable = data.available;
+
+                if (data.available) {
+                    statusEl.className = 'libreoffice-status available';
+                    statusEl.innerHTML = '<span class="status-icon">✓</span><span class="status-text">LibreOffice is available - Print as PDF feature is ready!</span>';
+                } else {
+                    statusEl.className = 'libreoffice-status unavailable';
+                    statusEl.innerHTML = '<span class="status-icon">✗</span><span class="status-text">LibreOffice is not available. This feature requires LibreOffice to be installed.</span>';
+                }
+            } catch (err) {
+                statusEl.className = 'libreoffice-status unavailable';
+                statusEl.innerHTML = '<span class="status-icon">✗</span><span class="status-text">Could not check LibreOffice availability.</span>';
+            }
+        }
+
+        // Check on page load
+        checkLibreOffice();
+
+        // =====================
+        // Data Table Tab (Existing)
+        // =====================
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const selectedFile = document.getElementById('selectedFile');
@@ -382,22 +602,22 @@
         const newConversionBtn = document.getElementById('newConversionBtn');
         const error = document.getElementById('error');
         const errorText = document.getElementById('errorText');
-        
+
         let currentFile = null;
-        
+
         // Click to upload
         uploadArea.addEventListener('click', () => fileInput.click());
-        
+
         // Drag and drop
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
-        
+
         uploadArea.addEventListener('dragleave', () => {
             uploadArea.classList.remove('dragover');
         });
-        
+
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
@@ -406,29 +626,29 @@
                 handleFile(files[0]);
             }
         });
-        
+
         // File input change
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 handleFile(e.target.files[0]);
             }
         });
-        
+
         // Handle file selection
         function handleFile(file) {
             const validTypes = ['.xlsx', '.xls', '.xlsm', '.csv'];
             const fileExt = '.' + file.name.split('.').pop().toLowerCase();
-            
+
             if (!validTypes.includes(fileExt)) {
                 showError('Invalid file type. Please upload .xlsx, .xls, .xlsm, or .csv');
                 return;
             }
-            
-            if (file.size > 100 * 1024 * 1024) {
-                showError('File is too large. Maximum size is 100MB');
+
+            if (file.size > 500 * 1024 * 1024) {
+                showError('File is too large. Maximum size is 500MB');
                 return;
             }
-            
+
             currentFile = file;
             fileName.textContent = file.name;
             selectedFile.classList.add('show');
@@ -436,7 +656,7 @@
             uploadArea.style.display = 'none';
             error.classList.remove('show');
         }
-        
+
         // Remove file
         removeBtn.addEventListener('click', () => {
             currentFile = null;
@@ -445,33 +665,33 @@
             convertBtn.classList.remove('show');
             uploadArea.style.display = 'block';
         });
-        
+
         // Convert
         convertBtn.addEventListener('click', async () => {
             if (!currentFile) return;
-            
+
             const formData = new FormData();
             formData.append('file', currentFile);
-            
+
             convertBtn.disabled = true;
             progress.classList.add('show');
             progressFill.style.width = '50%';
             progressText.textContent = 'Converting your Excel file...';
             result.classList.remove('show');
             error.classList.remove('show');
-            
+
             try {
                 const response = await fetch('/convert', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.success) {
                     progressFill.style.width = '100%';
                     progressText.textContent = 'Complete!';
-                    
+
                     // Show result
                     setTimeout(() => {
                         progress.classList.remove('show');
@@ -486,7 +706,7 @@
                 convertBtn.disabled = false;
             }
         });
-        
+
         // Show result
         function showResult(data) {
             const meta = data.metadata;
@@ -505,21 +725,21 @@
                 </div>
                 <div class="metadata-item">
                     <div class="metadata-label">Page Size</div>
-                    <div class="metadata-value">${Math.round(meta.page_width)} × ${Math.round(meta.page_height)}</div>
+                    <div class="metadata-value">${Math.round(meta.page_width)} x ${Math.round(meta.page_height)}</div>
                 </div>
             `;
-            
+
             downloadBtn.href = data.download_path;
             downloadBtn.download = data.filename;
             result.classList.add('show');
         }
-        
+
         // Show error
         function showError(message) {
             errorText.textContent = message;
             error.classList.add('show');
         }
-        
+
         // New conversion
         newConversionBtn.addEventListener('click', () => {
             currentFile = null;
@@ -530,6 +750,176 @@
             result.classList.remove('show');
             uploadArea.style.display = 'block';
             progressFill.style.width = '0%';
+        });
+
+        // =====================
+        // Print as PDF Tab (New)
+        // =====================
+        const printUploadArea = document.getElementById('printUploadArea');
+        const printFileInput = document.getElementById('printFileInput');
+        const printSelectedFile = document.getElementById('printSelectedFile');
+        const printFileName = document.getElementById('printFileName');
+        const printRemoveBtn = document.getElementById('printRemoveBtn');
+        const printConvertBtn = document.getElementById('printConvertBtn');
+        const printProgress = document.getElementById('printProgress');
+        const printProgressFill = document.getElementById('printProgressFill');
+        const printProgressText = document.getElementById('printProgressText');
+        const printResult = document.getElementById('printResult');
+        const printMetadata = document.getElementById('printMetadata');
+        const printDownloadBtn = document.getElementById('printDownloadBtn');
+        const printNewConversionBtn = document.getElementById('printNewConversionBtn');
+        const printError = document.getElementById('printError');
+        const printErrorText = document.getElementById('printErrorText');
+
+        let printCurrentFile = null;
+
+        // Click to upload
+        printUploadArea.addEventListener('click', () => printFileInput.click());
+
+        // Drag and drop
+        printUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            printUploadArea.classList.add('dragover');
+        });
+
+        printUploadArea.addEventListener('dragleave', () => {
+            printUploadArea.classList.remove('dragover');
+        });
+
+        printUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            printUploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handlePrintFile(files[0]);
+            }
+        });
+
+        // File input change
+        printFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handlePrintFile(e.target.files[0]);
+            }
+        });
+
+        // Handle file selection for print
+        function handlePrintFile(file) {
+            const validTypes = ['.xlsx', '.xls', '.xlsm'];
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+
+            if (!validTypes.includes(fileExt)) {
+                showPrintError('Invalid file type. Print as PDF only supports .xlsx, .xls, or .xlsm files (not CSV)');
+                return;
+            }
+
+            if (file.size > 500 * 1024 * 1024) {
+                showPrintError('File is too large. Maximum size is 500MB');
+                return;
+            }
+
+            printCurrentFile = file;
+            printFileName.textContent = file.name;
+            printSelectedFile.classList.add('show');
+            printConvertBtn.classList.add('show');
+            printUploadArea.style.display = 'none';
+            printError.classList.remove('show');
+        }
+
+        // Remove file
+        printRemoveBtn.addEventListener('click', () => {
+            printCurrentFile = null;
+            printFileInput.value = '';
+            printSelectedFile.classList.remove('show');
+            printConvertBtn.classList.remove('show');
+            printUploadArea.style.display = 'block';
+        });
+
+        // Convert using LibreOffice
+        printConvertBtn.addEventListener('click', async () => {
+            if (!printCurrentFile) return;
+
+            if (!libreofficeAvailable) {
+                showPrintError('LibreOffice is not available on this server. Please use the Data Table PDF tab instead.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', printCurrentFile);
+
+            printConvertBtn.disabled = true;
+            printProgress.classList.add('show');
+            printProgressFill.style.width = '50%';
+            printProgressText.textContent = 'Converting with LibreOffice (preserving formatting)...';
+            printResult.classList.remove('show');
+            printError.classList.remove('show');
+
+            try {
+                const response = await fetch('/convert-print', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    printProgressFill.style.width = '100%';
+                    printProgressText.textContent = 'Complete!';
+
+                    // Show result
+                    setTimeout(() => {
+                        printProgress.classList.remove('show');
+                        showPrintResult(data);
+                    }, 500);
+                } else {
+                    throw new Error(data.error || 'Conversion failed');
+                }
+            } catch (err) {
+                printProgress.classList.remove('show');
+                showPrintError(err.message);
+                printConvertBtn.disabled = false;
+            }
+        });
+
+        // Show print result
+        function showPrintResult(data) {
+            const meta = data.metadata;
+            const fileSizeKB = Math.round(meta.file_size / 1024);
+            const fileSizeDisplay = fileSizeKB > 1024
+                ? (fileSizeKB / 1024).toFixed(1) + ' MB'
+                : fileSizeKB + ' KB';
+
+            printMetadata.innerHTML = `
+                <div class="metadata-item">
+                    <div class="metadata-label">Method</div>
+                    <div class="metadata-value">${meta.method}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">File Size</div>
+                    <div class="metadata-value">${fileSizeDisplay}</div>
+                </div>
+            `;
+
+            printDownloadBtn.href = data.download_path;
+            printDownloadBtn.download = data.filename;
+            printResult.classList.add('show');
+        }
+
+        // Show print error
+        function showPrintError(message) {
+            printErrorText.textContent = message;
+            printError.classList.add('show');
+        }
+
+        // New print conversion
+        printNewConversionBtn.addEventListener('click', () => {
+            printCurrentFile = null;
+            printFileInput.value = '';
+            printSelectedFile.classList.remove('show');
+            printConvertBtn.classList.remove('show');
+            printConvertBtn.disabled = false;
+            printResult.classList.remove('show');
+            printUploadArea.style.display = 'block';
+            printProgressFill.style.width = '0%';
         });
     </script>
 </body>

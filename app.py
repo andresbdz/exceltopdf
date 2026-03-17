@@ -11,15 +11,253 @@ import os
 import tempfile
 from datetime import datetime
 from werkzeug.utils import secure_filename
+import subprocess
+import shutil
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB  max file size
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'xlsm', 'csv'}
+EXCEL_ONLY_EXTENSIONS = {'xlsx', 'xls', 'xlsm'}  # For LibreOffice conversion (no CSV)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def allowed_excel_file(filename):
+    """Check if file is an Excel file (not CSV) for LibreOffice conversion"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in EXCEL_ONLY_EXTENSIONS
+
+def get_libreoffice_path():
+    """Find LibreOffice executable path"""
+    # Common paths for LibreOffice
+    possible_paths = [
+        # Linux
+        '/usr/bin/libreoffice',
+        '/usr/bin/soffice',
+        '/usr/lib/libreoffice/program/soffice',
+        # macOS
+        '/Applications/LibreOffice.app/Contents/MacOS/soffice',
+        # Windows
+        r'C:\Program Files\LibreOffice\program\soffice.exe',
+        r'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
+    ]
+
+    # Check if libreoffice is in PATH
+    libreoffice_in_path = shutil.which('libreoffice') or shutil.which('soffice')
+    if libreoffice_in_path:
+        return libreoffice_in_path
+
+    # Check common paths
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+
+    return None
+
+def get_libreoffice_python():
+    """Find LibreOffice's Python interpreter (has UNO built-in)"""
+    possible_paths = [
+        # Linux
+        '/usr/bin/python3',  # System python with uno package
+        '/usr/lib/libreoffice/program/python',
+        # macOS
+        '/Applications/LibreOffice.app/Contents/Resources/python',
+        # Windows
+        r'C:\Program Files\LibreOffice\program\python.exe',
+        r'C:\Program Files (x86)\LibreOffice\program\python.exe',
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+
+    # Fall back to system python
+    return shutil.which('python3') or shutil.which('python')
+
+def is_libreoffice_available():
+    """Check if LibreOffice is installed and available"""
+    return get_libreoffice_path() is not None
+
+def excel_to_pdf_libreoffice(excel_path, output_dir):
+    """Convert Excel to PDF using LibreOffice with each sheet scaled to fit one page"""
+    libreoffice_path = get_libreoffice_path()
+    if not libreoffice_path:
+        raise RuntimeError("LibreOffice is not installed or not found")
+
+    # Determine output path
+    base_name = os.path.splitext(os.path.basename(excel_path))[0]
+    pdf_path = os.path.join(output_dir, f"{base_name}.pdf")
+
+    # Create a Python script that uses UNO to scale sheets and export
+    # This script will be run by LibreOffice's Python interpreter
+    script_content = f'''#!/usr/bin/env python3
+import sys
+import os
+import time
+import socket
+import subprocess
+
+def find_free_port():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))
+        return s.getsockname()[1]
+
+def main():
+    input_path = {repr(os.path.abspath(excel_path))}
+    output_path = {repr(os.path.abspath(pdf_path))}
+    port = find_free_port()
+
+    # Start LibreOffice in listening mode
+    lo_process = subprocess.Popen([
+        {repr(libreoffice_path)},
+        '--headless',
+        '--invisible',
+        '--nodefault',
+        '--nolockcheck',
+        '--nologo',
+        '--nofirststartwizard',
+        f'--accept=socket,host=localhost,port={{port}};urp;StarOffice.ServiceManager'
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    try:
+        # Wait for LibreOffice to start
+        time.sleep(2)
+
+        import uno
+        from com.sun.star.beans import PropertyValue
+
+        # Connect to LibreOffice
+        localContext = uno.getComponentContext()
+        resolver = localContext.ServiceManager.createInstanceWithContext(
+            "com.sun.star.bridge.UnoUrlResolver", localContext)
+
+        # Try to connect with retries
+        ctx = None
+        for attempt in range(10):
+            try:
+                ctx = resolver.resolve(
+                    f"uno:socket,host=localhost,port={{port}};urp;StarOffice.ComponentContext")
+                break
+            except:
+                time.sleep(1)
+
+        if ctx is None:
+            raise RuntimeError("Could not connect to LibreOffice")
+
+        smgr = ctx.ServiceManager
+        desktop = smgr.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
+
+        # Open the document
+        url = uno.systemPathToFileUrl(input_path)
+        props = (PropertyValue(Name="Hidden", Value=True),)
+        doc = desktop.loadComponentFromURL(url, "_blank", 0, props)
+
+        if doc is None:
+            raise RuntimeError("Could not open document")
+
+        try:
+            # Set each sheet to fit to one page
+            sheets = doc.getSheets()
+            for i in range(sheets.getCount()):
+                sheet = sheets.getByIndex(i)
+                style_name = sheet.PageStyle
+                styles = doc.getStyleFamilies().getByName("PageStyles")
+                page_style = styles.getByName(style_name)
+
+                # Scale to fit 1 page wide by 1 page tall
+                page_style.ScaleToPagesX = 1
+                page_style.ScaleToPagesY = 1
+
+            # Export to PDF
+            output_url = uno.systemPathToFileUrl(output_path)
+            export_props = (
+                PropertyValue(Name="FilterName", Value="calc_pdf_Export"),
+            )
+            doc.storeToURL(output_url, export_props)
+        finally:
+            doc.close(True)
+
+        # Shutdown LibreOffice
+        desktop.terminate()
+
+    finally:
+        lo_process.terminate()
+        lo_process.wait(timeout=10)
+
+    if not os.path.exists(output_path):
+        sys.exit(1)
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()
+'''
+
+    # Write the script to a temp file
+    script_path = os.path.join(tempfile.gettempdir(), f'lo_convert_{os.getpid()}.py')
+    try:
+        with open(script_path, 'w') as f:
+            f.write(script_content)
+
+        # Run the script with system Python (uno module available on Linux)
+        python_path = get_libreoffice_python()
+        env = os.environ.copy()
+        env['PYTHONPATH'] = '/usr/lib/libreoffice/program'
+        result = subprocess.run(
+            [python_path, script_path],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            env=env
+        )
+
+        if result.returncode != 0:
+            # Fall back to simple conversion without scaling
+            return excel_to_pdf_libreoffice_simple(excel_path, output_dir)
+
+        if not os.path.exists(pdf_path):
+            raise RuntimeError("PDF was not created")
+
+        return pdf_path
+
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("LibreOffice conversion timed out")
+    except Exception as e:
+        # Fall back to simple conversion
+        return excel_to_pdf_libreoffice_simple(excel_path, output_dir)
+    finally:
+        if os.path.exists(script_path):
+            os.remove(script_path)
+
+def excel_to_pdf_libreoffice_simple(excel_path, output_dir):
+    """Simple LibreOffice conversion without scaling (fallback)"""
+    libreoffice_path = get_libreoffice_path()
+
+    cmd = [
+        libreoffice_path,
+        '--headless',
+        '--convert-to', 'pdf',
+        '--outdir', output_dir,
+        excel_path
+    ]
+
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=300
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(f"LibreOffice conversion failed: {result.stderr}")
+
+    base_name = os.path.splitext(os.path.basename(excel_path))[0]
+    pdf_path = os.path.join(output_dir, f"{base_name}.pdf")
+
+    if not os.path.exists(pdf_path):
+        raise RuntimeError("PDF was not created by LibreOffice")
+
+    return pdf_path
 
 def excel_to_pdf(excel_path, pdf_path):
     """Convert Excel to PDF with all columns on each page and repeating headers"""
@@ -221,7 +459,65 @@ def download(filename):
     else:
         return "File not found", 404
 
-import os
+@app.route('/check-libreoffice')
+def check_libreoffice():
+    """Check if LibreOffice is available for print-style PDF conversion"""
+    available = is_libreoffice_available()
+    return jsonify({
+        'available': available,
+        'message': 'LibreOffice is available' if available else 'LibreOffice is not installed'
+    })
+
+@app.route('/convert-print', methods=['POST'])
+def convert_print():
+    """Convert Excel to PDF using LibreOffice (preserves original formatting)"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if not allowed_excel_file(file.filename):
+        return jsonify({'error': 'Invalid file type. Print as PDF only supports .xlsx, .xls, or .xlsm files (not CSV)'}), 400
+
+    if not is_libreoffice_available():
+        return jsonify({'error': 'LibreOffice is not available on this server'}), 503
+
+    try:
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        excel_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{timestamp}_{filename}")
+        file.save(excel_path)
+
+        # Convert using LibreOffice
+        pdf_path = excel_to_pdf_libreoffice(excel_path, app.config['UPLOAD_FOLDER'])
+
+        # Rename PDF to include timestamp
+        pdf_filename = filename.rsplit('.', 1)[0] + '.pdf'
+        final_pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{timestamp}_{pdf_filename}")
+        os.rename(pdf_path, final_pdf_path)
+
+        # Clean up Excel file
+        os.remove(excel_path)
+
+        # Get PDF file size
+        pdf_size = os.path.getsize(final_pdf_path)
+
+        return jsonify({
+            'success': True,
+            'filename': pdf_filename,
+            'download_path': f"/download/{timestamp}_{pdf_filename}",
+            'metadata': {
+                'file_size': pdf_size,
+                'method': 'LibreOffice'
+            }
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
