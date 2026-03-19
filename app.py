@@ -180,11 +180,16 @@ def main():
                 styles = doc.getStyleFamilies().getByName("PageStyles")
                 page_style = styles.getByName(style_name)
 
-                # 5. Fit width to 1 page, allow multiple pages vertically
-                page_style.ScaleToPagesX = 1  # Fit width to 1 page
-                page_style.ScaleToPagesY = 0  # No limit on height (auto)
+                # 5. Set landscape orientation with A2 paper size
+                page_style.IsLandscape = True
+                page_style.Width = 59400   # A2 width: 594mm (1/100 mm units)
+                page_style.Height = 42000  # A2 height: 420mm
 
-                # 6. Reduce margins for more content space (1/100 mm units)
+                # 6. Fit entire sheet to 1 page
+                page_style.ScaleToPagesX = 1
+                page_style.ScaleToPagesY = 1
+
+                # 7. Reduce margins for more content space (1/100 mm units)
                 page_style.LeftMargin = 1000   # 10mm
                 page_style.RightMargin = 1000  # 10mm
                 page_style.TopMargin = 1000    # 10mm
