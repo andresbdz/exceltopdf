@@ -157,17 +157,38 @@ def main():
             raise RuntimeError("Could not open document")
 
         try:
-            # Set each sheet to fit to one page
+            # Process each sheet
             sheets = doc.getSheets()
             for i in range(sheets.getCount()):
                 sheet = sheets.getByIndex(i)
+
+                # 1. Get used range to check if sheet has content
+                cursor = sheet.createCursor()
+                cursor.gotoStartOfUsedArea(False)
+                cursor.gotoEndOfUsedArea(True)
+                used_range = cursor.getRangeAddress()
+
+                # 2. Skip empty sheets (prevents blank pages)
+                if used_range.EndColumn < used_range.StartColumn:
+                    continue
+
+                # 3. Set print area to only the used range
+                sheet.setPrintAreas([used_range])
+
+                # 4. Configure page style for fit-width scaling
                 style_name = sheet.PageStyle
                 styles = doc.getStyleFamilies().getByName("PageStyles")
                 page_style = styles.getByName(style_name)
 
-                # Scale to fit 1 page wide by 1 page tall
-                page_style.ScaleToPagesX = 1
-                page_style.ScaleToPagesY = 1
+                # 5. Fit width to 1 page, allow multiple pages vertically
+                page_style.ScaleToPagesX = 1  # Fit width to 1 page
+                page_style.ScaleToPagesY = 0  # No limit on height (auto)
+
+                # 6. Reduce margins for more content space (1/100 mm units)
+                page_style.LeftMargin = 1000   # 10mm
+                page_style.RightMargin = 1000  # 10mm
+                page_style.TopMargin = 1000    # 10mm
+                page_style.BottomMargin = 1000 # 10mm
 
             # Export to PDF
             output_url = uno.systemPathToFileUrl(output_path)
